@@ -147,11 +147,7 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 	CGSize contextSize = CGSizeMake(size, size);
 	UIGraphicsBeginImageContextWithOptions(contextSize, NO, scale);
 
-	//CGContextRef context = UIGraphicsGetCurrentContext();
-	//CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
-	//CGContextFillRect(context, (CGRect){CGPointZero, contextSize});
-
-	[[UIColor blueColor] set];
+	[[UIColor whiteColor] set];
 
 	int fontSize = size - 5;
 	UIFont *font = [UIFont systemFontOfSize:fontSize];
