@@ -2,8 +2,6 @@
 #import <UIKit/UIKit.h>
 #import <libflipswitch/Flipswitch.h>
 
-#define kBundleID @"com.jw97.fliplaunch"
-
 @interface SBApplication : NSObject
 - (NSString *)displayName;
 @end
@@ -44,14 +42,22 @@
 - (void)registerApplicationIDWithFS:(NSString *)applicationID;
 @end
 
+#define kBundleID @"com.jw97.fliplaunch"
+#define kPrefsPath @"/var/mobile/Library/Preferences/com.jw97.fliplaunch.plist"
+
 static NSString *applicationIDFromFSID(NSString *flipswitchID)
 {
 	return [flipswitchID stringByReplacingOccurrencesOfString:[NSString stringWithFormat:@"%@-", kBundleID] withString:@""];
 }
 
+static SBApplication *applicationForID(NSString *applicationID)
+{
+	return [[objc_getClass("SBApplicationController") sharedInstance] applicationWithDisplayIdentifier:applicationID];
+}
+
 static SBApplication *applicationForFSID(NSString *flipswitchID)
 {
-	return [[objc_getClass("SBApplicationController") sharedInstance] applicationWithDisplayIdentifier:applicationIDFromFSID(flipswitchID)];
+	return applicationForID(applicationIDFromFSID(flipswitchID));
 }
 
 @implementation FLDataSource
@@ -72,7 +78,7 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 {
 	if ((self = [super init]))
 	{
-		launchIDs = [[NSMutableArray alloc] initWithObjects:@"com.apple.Music", nil];
+		launchIDs = [[NSDictionary dictionaryWithContentsOfFile:kPrefsPath] objectForKey:@"launchIDs"];
 		[self registerAllApplicationIDsWithFS];
 	}
 	return self;
@@ -110,20 +116,9 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 
 - (id)glyphImageDescriptorOfState:(FSSwitchState)switchState size:(CGFloat)size scale:(CGFloat)scale forSwitchIdentifier:(NSString *)switchIdentifier
 {
-	NSString *applicationID = applicationIDFromFSID(switchIdentifier);
-
-	//TODO: Massively redo to add proper glyph generation 
-	SBIconModel *iconModel = [[objc_getClass("SBIconViewMap") homescreenMap] iconModel];
-    SBIcon *appIcon = [iconModel applicationIconForDisplayIdentifier:applicationID];
-
-    CGSize iconSize = CGSizeMake(size, size);
-    UIImage *applicationImage = [appIcon getIconImage:1];
-    UIGraphicsBeginImageContextWithOptions(iconSize, NO, scale);
-    [applicationImage drawInRect:CGRectMake(0, 0, iconSize.width, iconSize.height)];
-    UIImage *resizedImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-
-    return resizedImage;
+	//TODO: Add Category based Glyphs, A La Axis
+	
+    return nil;
 }
 
 - (FSSwitchState)stateForSwitchIdentifier:(NSString *)switchIdentifier
