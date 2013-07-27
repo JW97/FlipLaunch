@@ -1,0 +1,9 @@
+Package: com.jw97.fliplaunch
+Name: FlipLaunch
+Depends: mobilesubstrate
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: An awesome MobileSubstrate tweak!
+Maintainer: Jack Willis
+Author: Jack Willis
+Section: Tweaks
