@@ -1,4 +1,5 @@
 #import <objc/runtime.h>
+#import <libkern/OSAtomic.h>
 #import <UIKit/UIKit.h>
 #import <libflipswitch/Flipswitch.h>
 
@@ -33,7 +34,10 @@
 
 @interface FLDataSource : NSObject <FSSwitchDataSource>
 {
+	NSMutableDictionary *prefsDict;
 	NSMutableArray *launchIDs;
+
+	OSSpinLock spinLock;
 }
 
 + (FLDataSource *)sharedInstance;
@@ -78,7 +82,9 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 {
 	if ((self = [super init]))
 	{
-		launchIDs = [[NSDictionary dictionaryWithContentsOfFile:kPrefsPath] objectForKey:@"launchIDs"];
+		prefsDict = [NSMutableDictionary dictionaryWithContentsOfFile:kPrefsPath] ?: [NSMutableDictionary dictionary];
+		launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
+
 		[self registerAllApplicationIDsWithFS];
 	}
 	return self;
@@ -86,16 +92,18 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 
 - (void)dealloc
 {
-	[launchIDs release];
+	[prefsDict release];
 	[super dealloc];
 }
 
 - (void)registerAllApplicationIDsWithFS
 {
+	OSSpinLockLock(&spinLock);
 	for (NSString *applicationID in launchIDs)
 	{
 		[self registerApplicationIDWithFS:applicationID];
 	}
+	OSSpinLockUnlock(&spinLock);
 }
 
 - (void)registerApplicationIDWithFS:(NSString *)applicationID
@@ -108,6 +116,19 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 	}
 }
 
+- (void)addNewLaunchID:(NSString *)applicationID
+{
+	if (applicationForID(applicationID) == nil) return;
+
+	[self registerApplicationIDWithFS:applicationID];
+
+	OSSpinLockLock(&spinLock);
+	if (![launchIDs containsObject:applicationID]) [launchIDs addObject:applicationID];
+	[prefsDict setObject:launchIDs forKey:@"launchIDs"];
+	[prefsDict writeToFile:kPrefsPath atomically:YES];
+	OSSpinLockUnlock(&spinLock);
+}
+
 //FS Methods
 - (NSString *)titleForSwitchIdentifier:(NSString *)switchIdentifier
 {
@@ -117,8 +138,30 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 - (id)glyphImageDescriptorOfState:(FSSwitchState)switchState size:(CGFloat)size scale:(CGFloat)scale forSwitchIdentifier:(NSString *)switchIdentifier
 {
 	//TODO: Add Category based Glyphs, A La Axis
-	
-    return nil;
+	//Meanwhile draw first two letters of App Name
+
+	SBApplication *application = applicationForFSID(switchIdentifier);
+	NSString *applicationName = [application displayName];
+	NSString *drawName = [applicationName substringToIndex:2];
+
+	CGSize contextSize = CGSizeMake(size, size);
+	UIGraphicsBeginImageContextWithOptions(contextSize, NO, scale);
+
+	//CGContextRef context = UIGraphicsGetCurrentContext();
+	//CGContextSetFillColorWithColor(context, [UIColor whiteColor].CGColor);
+	//CGContextFillRect(context, (CGRect){CGPointZero, contextSize});
+
+	[[UIColor blueColor] set];
+
+	int fontSize = size - 5;
+	UIFont *font = [UIFont systemFontOfSize:fontSize];
+	CGSize drawSize = [drawName sizeWithFont:font];
+	CGPoint drawPoint = CGPointMake(roundf(contextSize.width / 2.0f - (drawSize.width / 2.0f)), roundf(contextSize.height / 2.0f - (drawSize.height / 2.0f)));
+	[drawName drawAtPoint:drawPoint withFont:font];
+
+	UIImage *finalImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    return finalImage;
 }
 
 - (FSSwitchState)stateForSwitchIdentifier:(NSString *)switchIdentifier
