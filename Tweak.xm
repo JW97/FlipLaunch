@@ -84,8 +84,6 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 	{
 		prefsDict = [NSMutableDictionary dictionaryWithContentsOfFile:kPrefsPath] ?: [NSMutableDictionary dictionary];
 		launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
-
-		[self registerAllApplicationIDsWithFS];
 	}
 	return self;
 }
@@ -118,7 +116,7 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 
 - (void)addNewLaunchID:(NSString *)applicationID
 {
-	if (applicationForID(applicationID) == nil) return;
+	if (applicationID == nil || applicationForID(applicationID) == nil) return;
 
 	[self registerApplicationIDWithFS:applicationID];
 
@@ -175,5 +173,5 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 
 %ctor
 {
-	[FLDataSource sharedInstance];
+	[[NSNotificationCenter defaultCenter] addObserver:[FLDataSource sharedInstance] selector:@selector(registerAllApplicationIDsWithFS) name:UIApplicationDidFinishLaunchingNotification object:nil];
 }
