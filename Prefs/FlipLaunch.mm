@@ -43,7 +43,7 @@
         
         //AppList integration
         _prefsKey = @"launchIDs";
-        _prefsDict = [NSMutableDictionary dictionaryWithContentsOfFile:kPrefsPath] ?: [NSMutableDictionary dictionary];
+        _prefsDict = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefsPath] ?: [[NSMutableDictionary alloc] init];
 
         _dataSource = [[FLAppsDataSource alloc] initWithController:self];
         NSNumber *iconSize = [NSNumber numberWithUnsignedInteger:ALApplicationIconSizeSmall];
@@ -60,6 +60,8 @@
 
 - (void)dealloc
 {
+    [_prefsDict release];
+
 	[_tableView setDelegate:nil];
 	[_tableView setDataSource:nil];
 	[_tableView release];
@@ -102,12 +104,7 @@
 - (void)cellAtIndexPath:(NSIndexPath *)indexPath didChangeToValue:(id)newValue
 {
     NSString *identifier = [_dataSource displayIdentifierForIndexPath:indexPath];
-    NSMutableArray *filteredApps = [_prefsDict objectForKey:_prefsKey];
-    if (!filteredApps)
-    {
-        filteredApps = [NSMutableArray arrayWithObjects:nil];
-        [_prefsDict setObject:filteredApps forKey:_prefsKey];
-    }
+    NSMutableArray *filteredApps = [_prefsDict objectForKey:_prefsKey] ?: [NSMutableArray array];
     
     if ([newValue boolValue]) [filteredApps addObject:identifier];
     else if(![newValue boolValue]) [filteredApps removeObject:identifier];
@@ -119,8 +116,9 @@
 - (id)valueForCellAtIndexPath:(NSIndexPath *)indexPath
 {
     NSString *identifier = [_dataSource displayIdentifierForIndexPath:indexPath];
-    
-    return [NSNumber numberWithBool:[[_prefsDict objectForKey:_prefsKey] containsObject:identifier]];
+    NSArray *array = [_prefsDict objectForKey:_prefsKey] ?: [NSMutableArray array];
+
+    return [NSNumber numberWithBool:[array containsObject:identifier]];
 }
 
 @end
