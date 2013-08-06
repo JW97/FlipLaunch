@@ -1,6 +1,6 @@
 Package: com.jw97.fliplaunch
 Name: FlipLaunch
-Depends: mobilesubstrate
+Depends: mobilesubstrate, applist, com.a3tweaks.flipswitch
 Version: 0.0.1
 Architecture: iphoneos-arm
 Description: An awesome MobileSubstrate tweak!
