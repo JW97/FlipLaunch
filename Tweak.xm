@@ -5,6 +5,7 @@
 
 @interface SBApplication : NSObject
 - (NSString *)displayName;
+- (NSString *)bundleIdentifier;
 @end
 
 @interface SBApplicationController : NSObject
@@ -44,9 +45,12 @@
 - (id)init;
 - (void)registerAllApplicationIDsWithFS;
 - (void)registerApplicationIDWithFS:(NSString *)applicationID;
+- (void)addNewLaunchID:(NSString *)applicationID;
+- (void)reloadLaunchIDs;
 @end
 
 #define kBundleID @"com.jw97.fliplaunch"
+#define kPDFsPath @"/var/mobile/Library/FlipLaunch"
 #define kPrefsPath @"/var/mobile/Library/Preferences/com.jw97.fliplaunch.plist"
 
 static NSString *applicationIDFromFSID(NSString *flipswitchID)
@@ -62,6 +66,11 @@ static SBApplication *applicationForID(NSString *applicationID)
 static SBApplication *applicationForFSID(NSString *flipswitchID)
 {
 	return applicationForID(applicationIDFromFSID(flipswitchID));
+}
+
+static void PreferencesChangedCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo)
+{    
+    [(FLDataSource *)observer reloadLaunchIDs];
 }
 
 @implementation FLDataSource
@@ -84,6 +93,11 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 	{
 		prefsDict = [NSMutableDictionary dictionaryWithContentsOfFile:kPrefsPath] ?: [NSMutableDictionary dictionary];
 		launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
+
+		BOOL isDirectory = YES;
+        if (![[NSFileManager defaultManager] fileExistsAtPath:kPDFsPath isDirectory:&isDirectory]) [[NSFileManager defaultManager] createDirectoryAtPath:kPDFsPath withIntermediateDirectories:YES attributes:nil error:nil];
+
+        CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), self, PreferencesChangedCallback, CFSTR("com.jw97.fliplaunch.settingschanged"), NULL, CFNotificationSuspensionBehaviorCoalesce);
 	}
 	return self;
 }
@@ -92,6 +106,13 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 {
 	[prefsDict release];
 	[super dealloc];
+}
+
+- (void)reloadLaunchIDs
+{
+	prefsDict = [NSMutableDictionary dictionaryWithContentsOfFile:kPrefsPath] ?: [NSMutableDictionary dictionary];
+	launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
+	[self registerAllApplicationIDsWithFS];
 }
 
 - (void)registerAllApplicationIDsWithFS
@@ -142,20 +163,37 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 	NSString *applicationName = [application displayName];
 	NSString *drawName = [applicationName substringToIndex:2];
 
-	CGSize contextSize = CGSizeMake(size, size);
-	UIGraphicsBeginImageContextWithOptions(contextSize, NO, scale);
+	CGRect pageRect = (CGRect){CGPointZero, {96, 96}};
+    NSString *filePath = [NSString stringWithFormat:@"%@/%@.pdf", kPDFsPath, [application bundleIdentifier]];
+    
+    CGContextRef pdfContext;
+    CFStringRef path = (CFStringRef)filePath;
+    CFURLRef url;
+    CFMutableDictionaryRef myDictionary = NULL;
+    
+    // Create a CFURL using the CFString we just defined
+    url = CFURLCreateWithFileSystemPath (NULL, path, kCFURLPOSIXPathStyle, 0);
 
-	[[UIColor whiteColor] set];
+    myDictionary = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    pdfContext = CGPDFContextCreateWithURL (url, &pageRect, myDictionary);
+    CFRelease(myDictionary);
+    CFRelease(url);
 
-	int fontSize = size - 5;
-	UIFont *font = [UIFont systemFontOfSize:fontSize];
-	CGSize drawSize = [drawName sizeWithFont:font];
-	CGPoint drawPoint = CGPointMake(roundf(contextSize.width / 2.0f - (drawSize.width / 2.0f)), roundf(contextSize.height / 2.0f - (drawSize.height / 2.0f)));
-	[drawName drawAtPoint:drawPoint withFont:font];
+    CGContextBeginPage (pdfContext, &pageRect);
+    
+    int fontSize = pageRect.size.height - 27;
+    CGSize textSize = [drawName sizeWithFont:[UIFont systemFontOfSize:fontSize]];
+    
+    CGContextSelectFont(pdfContext, "Helvetica-Bold", fontSize, kCGEncodingMacRoman);
+    CGContextSetTextDrawingMode (pdfContext, kCGTextFill);
+    CGContextSetRGBFillColor (pdfContext, 0, 0, 0, 1);
+    const char *text = [drawName UTF8String];
+    CGContextShowTextAtPoint(pdfContext, pageRect.size.width / 2.0f - (textSize.width / 2.0f), pageRect.size.height / 2.0f - (fontSize / 3.0f), text, strlen(text));
 
-	UIImage *finalImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
-    return finalImage;
+    CGContextEndPage (pdfContext);
+    CGContextRelease (pdfContext);
+
+    return filePath;
 }
 
 - (FSSwitchState)stateForSwitchIdentifier:(NSString *)switchIdentifier
