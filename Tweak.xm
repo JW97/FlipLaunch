@@ -166,27 +166,22 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	CGRect pageRect = (CGRect){CGPointZero, {96, 96}};
     NSString *filePath = [NSString stringWithFormat:@"%@/%@.pdf", kPDFsPath, [application bundleIdentifier]];
     
-    CGContextRef pdfContext;
     CFStringRef path = (CFStringRef)filePath;
-    CFURLRef url;
-    CFMutableDictionaryRef myDictionary = NULL;
-    
-    // Create a CFURL using the CFString we just defined
-    url = CFURLCreateWithFileSystemPath (NULL, path, kCFURLPOSIXPathStyle, 0);
+    CFURLRef url = CFURLCreateWithFileSystemPath(NULL, path, kCFURLPOSIXPathStyle, 0);
 
-    myDictionary = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-    pdfContext = CGPDFContextCreateWithURL (url, &pageRect, myDictionary);
-    CFRelease(myDictionary);
+    CFMutableDictionaryRef optionsDict = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    CGContextRef pdfContext = CGPDFContextCreateWithURL(url, &pageRect, optionsDict);
+    CFRelease(optionsDict);
     CFRelease(url);
 
-    CGContextBeginPage (pdfContext, &pageRect);
+    CGContextBeginPage(pdfContext, &pageRect);
     
     int fontSize = pageRect.size.height - 27;
     CGSize textSize = [drawName sizeWithFont:[UIFont systemFontOfSize:fontSize]];
     
     CGContextSelectFont(pdfContext, "Helvetica-Bold", fontSize, kCGEncodingMacRoman);
-    CGContextSetTextDrawingMode (pdfContext, kCGTextFill);
-    CGContextSetRGBFillColor (pdfContext, 0, 0, 0, 1);
+    CGContextSetTextDrawingMode(pdfContext, kCGTextFill);
+    CGContextSetRGBFillColor(pdfContext, 0, 0, 0, 1);
     const char *text = [drawName UTF8String];
     CGContextShowTextAtPoint(pdfContext, pageRect.size.width / 2.0f - (textSize.width / 2.0f), pageRect.size.height / 2.0f - (fontSize / 3.0f), text, strlen(text));
 
