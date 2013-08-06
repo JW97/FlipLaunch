@@ -1,0 +1,10 @@
+{
+    entry = {
+	bundle = FlipLaunch;
+	cell = PSLinkCell;
+	detail = FLPrefsController;
+	icon = FlipLaunch.png;
+	isController = 1;
+	label = FlipLaunch;
+    };
+}
