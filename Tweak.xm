@@ -120,7 +120,8 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	OSSpinLockLock(&spinLock);
 	for (NSString *applicationID in launchIDs)
 	{
-		[self registerApplicationIDWithFS:applicationID];
+		//[self registerApplicationIDWithFS:applicationID];
+		[self performSelectorOnMainThread:@selector(registerApplicationIDWithFS:) withObject:applicationID waitUntilDone:YES];
 	}
 	OSSpinLockUnlock(&spinLock);
 }
