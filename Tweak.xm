@@ -91,7 +91,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 {
 	if ((self = [super init]))
 	{
-		prefsDict = [NSMutableDictionary dictionaryWithContentsOfFile:kPrefsPath] ?: [NSMutableDictionary dictionary];
+		prefsDict = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefsPath] ?: [[NSMutableDictionary alloc] init];
 		launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
 
 		BOOL isDirectory = YES;
@@ -110,7 +110,8 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 - (void)reloadLaunchIDs
 {
-	prefsDict = [NSMutableDictionary dictionaryWithContentsOfFile:kPrefsPath] ?: [NSMutableDictionary dictionary];
+	[prefsDict release];
+	prefsDict = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefsPath] ?: [[NSMutableDictionary alloc] init];
 	launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
 	[self registerAllApplicationIDsWithFS];
 }
@@ -123,6 +124,12 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 		//[self registerApplicationIDWithFS:applicationID];
 		[self performSelectorOnMainThread:@selector(registerApplicationIDWithFS:) withObject:applicationID waitUntilDone:YES];
 	}
+
+	NSArray *currentPDFs = [[NSFileManager defaultManager] contentsOfDirectoryAtPath:kPDFsPath error:nil];
+    for (NSString *pdf in currentPDFs)
+    {
+    	if (![launchIDs containsObject:pdf]) [[NSFileManager defaultManager] removeItemAtPath:[NSString stringWithFormat:@"%@/%@", kPDFsPath, pdf] error:nil];
+    }
 	OSSpinLockUnlock(&spinLock);
 }
 
@@ -161,11 +168,15 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	//Meanwhile draw first two letters of App Name
 
 	SBApplication *application = applicationForFSID(switchIdentifier);
+	NSString *filePath = [NSString stringWithFormat:@"%@/%@.pdf", kPDFsPath, [application bundleIdentifier]];
+
+    if ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) return filePath;
+
+	//Create PDF
 	NSString *applicationName = [application displayName];
 	NSString *drawName = [applicationName substringToIndex:2];
 
 	CGRect pageRect = (CGRect){CGPointZero, {96, 96}};
-    NSString *filePath = [NSString stringWithFormat:@"%@/%@.pdf", kPDFsPath, [application bundleIdentifier]];
     
     CFStringRef path = (CFStringRef)filePath;
     CFURLRef url = CFURLCreateWithFileSystemPath(NULL, path, kCFURLPOSIXPathStyle, 0);
