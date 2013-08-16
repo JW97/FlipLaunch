@@ -45,6 +45,7 @@
 - (id)init;
 - (void)registerAllApplicationIDsWithFS;
 - (void)registerApplicationIDWithFS:(NSString *)applicationID;
+- (void)removeApplicationIDFromFS:(NSString *)applicationID;
 - (void)addNewLaunchID:(NSString *)applicationID;
 - (void)reloadLaunchIDs;
 @end
@@ -112,7 +113,16 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 {
 	[prefsDict release];
 	prefsDict = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefsPath] ?: [[NSMutableDictionary alloc] init];
-	launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
+	NSMutableArray *tempLaunchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
+
+	OSSpinLockLock(&spinLock);
+	for (NSString *applicationID in launchIDs)
+	{
+		if (![tempLaunchIDs containsObject:applicationID]) [self removeApplicationIDFromFS:applicationID];
+	}
+	OSSpinLockUnlock(&spinLock);
+
+	launchIDs = tempLaunchIDs;
 	[self registerAllApplicationIDsWithFS];
 }
 
@@ -121,7 +131,6 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	OSSpinLockLock(&spinLock);
 	for (NSString *applicationID in launchIDs)
 	{
-		//[self registerApplicationIDWithFS:applicationID];
 		[self performSelectorOnMainThread:@selector(registerApplicationIDWithFS:) withObject:applicationID waitUntilDone:YES];
 	}
 
@@ -143,6 +152,16 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	}
 }
 
+- (void)removeApplicationIDFromFS:(NSString *)applicationID
+{
+	NSString *switchIdentifier = [NSString stringWithFormat:@"%@-%@", kBundleID, applicationID];
+
+	if ([[[FSSwitchPanel sharedPanel] switchIdentifiers] containsObject:switchIdentifier])
+	{
+		[[FSSwitchPanel sharedPanel] unregisterSwitchIdentifier:switchIdentifier];
+	}
+}
+
 - (void)addNewLaunchID:(NSString *)applicationID
 {
 	if (applicationID == nil || applicationForID(applicationID) == nil) return;
@@ -155,6 +174,8 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	[prefsDict writeToFile:kPrefsPath atomically:YES];
 	OSSpinLockUnlock(&spinLock);
 }
+
+
 
 //FS Methods
 - (NSString *)titleForSwitchIdentifier:(NSString *)switchIdentifier
