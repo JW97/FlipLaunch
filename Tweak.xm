@@ -92,8 +92,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 {
 	if ((self = [super init]))
 	{
-		prefsDict = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefsPath] ?: [[NSMutableDictionary alloc] init];
-		launchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
+		[self reloadLaunchIDs];
 
 		BOOL isDirectory = YES;
         if (![[NSFileManager defaultManager] fileExistsAtPath:kPDFsPath isDirectory:&isDirectory]) [[NSFileManager defaultManager] createDirectoryAtPath:kPDFsPath withIntermediateDirectories:YES attributes:nil error:nil];
@@ -113,7 +112,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 {
 	[prefsDict release];
 	prefsDict = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefsPath] ?: [[NSMutableDictionary alloc] init];
-	NSMutableArray *tempLaunchIDs = [prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array];
+	NSMutableArray *tempLaunchIDs = [([prefsDict objectForKey:@"launchIDs"] ?: [NSMutableArray array]) retain];
 
 	OSSpinLockLock(&spinLock);
 	for (NSString *applicationID in launchIDs)
@@ -122,7 +121,10 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	}
 	OSSpinLockUnlock(&spinLock);
 
-	launchIDs = tempLaunchIDs;
+	[launchIDs release];
+	launchIDs = [tempLaunchIDs mutableCopy];
+	[tempLaunchIDs release];
+
 	[self registerAllApplicationIDsWithFS];
 }
 
