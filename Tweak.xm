@@ -203,8 +203,13 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
     CGContextBeginPage(pdfContext, &pageRect);
     
-    int fontSize = pageRect.size.height - 27;
+    int fontSize = pageRect.size.width - 27;
     CGSize textSize = [drawName sizeWithFont:[UIFont systemFontOfSize:fontSize]];
+   	while (textSize.width >= pageRect.size.width - 8.0f)
+    {
+    	fontSize--;
+    	textSize = [drawName sizeWithFont:[UIFont systemFontOfSize:fontSize]];
+    }
     
     CGContextSelectFont(pdfContext, "Helvetica-Bold", fontSize, kCGEncodingMacRoman);
     CGContextSetTextDrawingMode(pdfContext, kCGTextFill);
