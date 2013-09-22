@@ -13,24 +13,12 @@
 - (SBApplication *)applicationWithDisplayIdentifier:(NSString *)identifier;
 @end
 
-@interface SBIcon : NSObject
-- (UIImage *)getIconImage:(int)format;
-@end
-
-@interface SBIconModel : NSObject
-+ (SBIconModel *)sharedInstance;
-- (id)applicationIconForDisplayIdentifier:(NSString *)identifier;
-@end
-
-@interface SBIconViewMap : NSObject
-+ (SBIconViewMap *)switcherMap;
-+ (SBIconViewMap *)homescreenMap;
-- (SBIconModel *)iconModel;
-@end
-
 @interface SBUIController : NSObject
 + (SBUIController *)sharedInstance;
 - (void)activateApplicationFromSwitcher:(id)application;
+
+//iOS 7
+- (void)activateApplicationAnimated:(id)application;
 @end
 
 @interface FLDataSource : NSObject <FSSwitchDataSource>
@@ -53,6 +41,8 @@
 #define kBundleID @"com.jw97.fliplaunch"
 #define kPDFsPath @"/var/mobile/Library/FlipLaunch"
 #define kPrefsPath @"/var/mobile/Library/Preferences/com.jw97.fliplaunch.plist"
+
+static BOOL isOS7;
 
 static NSString *applicationIDFromFSID(NSString *flipswitchID)
 {
@@ -92,6 +82,8 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 {
 	if ((self = [super init]))
 	{
+		isOS7 = (objc_getClass("UIAttachmentBehavior") != nil);
+		
 		[self reloadLaunchIDs];
 
 		BOOL isDirectory = YES;
@@ -234,7 +226,8 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 - (void)applyState:(FSSwitchState)newState forSwitchIdentifier:(NSString *)switchIdentifier
 {
 	SBApplication *launchApp = applicationForFSID(switchIdentifier);
-	if (launchApp != nil) [[objc_getClass("SBUIController") sharedInstance] activateApplicationFromSwitcher:launchApp];
+	if (launchApp != nil && !isOS7) [[objc_getClass("SBUIController") sharedInstance] activateApplicationFromSwitcher:launchApp];
+	else if (launchApp != nil) [[objc_getClass("SBUIController") sharedInstance] activateApplicationAnimated:launchApp];
 }
 
 @end
