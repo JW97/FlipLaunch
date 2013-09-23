@@ -62,6 +62,7 @@ static SBApplication *applicationForFSID(NSString *flipswitchID)
 static void PreferencesChangedCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo)
 {    
     [(FLDataSource *)observer reloadLaunchIDs];
+    [(FLDataSource *)observer registerAllApplicationIDsWithFS];
 }
 
 @implementation FLDataSource
@@ -116,8 +117,6 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 	[launchIDs release];
 	launchIDs = [tempLaunchIDs mutableCopy];
 	[tempLaunchIDs release];
-
-	[self registerAllApplicationIDsWithFS];
 }
 
 - (void)registerAllApplicationIDsWithFS
