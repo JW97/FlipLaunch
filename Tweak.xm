@@ -87,8 +87,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 		
 		[self reloadLaunchIDs];
 
-		BOOL isDirectory = YES;
-        if (![[NSFileManager defaultManager] fileExistsAtPath:kPDFsPath isDirectory:&isDirectory]) [[NSFileManager defaultManager] createDirectoryAtPath:kPDFsPath withIntermediateDirectories:YES attributes:nil error:nil];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:kPDFsPath]) [[NSFileManager defaultManager] createDirectoryAtPath:kPDFsPath withIntermediateDirectories:YES attributes:nil error:nil];
 
         CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), self, PreferencesChangedCallback, CFSTR("com.jw97.fliplaunch.settingschanged"), NULL, CFNotificationSuspensionBehaviorCoalesce);
 	}
