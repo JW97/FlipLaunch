@@ -1,0 +1,3 @@
+#!/bin/sh
+rm -rf /var/mobile/Library/FlipLaunch
+rm -rf /tmp/FlipswitchCache

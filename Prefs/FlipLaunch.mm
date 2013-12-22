@@ -1,5 +1,6 @@
 #import <Preferences/Preferences.h>
 #import <libapplist/AppList.h>
+#import <objc/runtime.h>
 
 @interface FLPrefsController : PSViewController <UITableViewDelegate>
 {
@@ -40,6 +41,9 @@
 		frame.size = size;
         
 		_tableView = [[UITableView alloc] initWithFrame:frame style:UITableViewStyleGrouped];
+
+        BOOL isOS7 = (objc_getClass("UIAttachmentBehavior") != nil);
+        if (isOS7) _tableView.contentInset = UIEdgeInsetsMake(64.0f, 0.0f, 0.0f, 0.0f);
         
         //AppList integration
         _prefsKey = @"launchIDs";

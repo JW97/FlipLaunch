@@ -6,6 +6,7 @@
 @interface SBApplication : NSObject
 - (NSString *)displayName;
 - (NSString *)bundleIdentifier;
+- (NSString *)displayIdentifier;
 @end
 
 @interface SBApplicationController : NSObject
@@ -201,9 +202,9 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
     CGContextBeginPage(pdfContext, &pageRect);
     
-    int fontSize = pageRect.size.width - 27;
+    NSInteger fontSize = pageRect.size.width - 27;
     CGSize textSize = [drawName sizeWithFont:[UIFont systemFontOfSize:fontSize]];
-   	while (textSize.width >= pageRect.size.width - 8.0f)
+   	while (textSize.width > pageRect.size.width - 10.0f)
     {
     	fontSize--;
     	textSize = [drawName sizeWithFont:[UIFont systemFontOfSize:fontSize]];
@@ -213,7 +214,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
     CGContextSetTextDrawingMode(pdfContext, kCGTextFill);
     CGContextSetRGBFillColor(pdfContext, 0, 0, 0, 1);
     const char *text = [drawName UTF8String];
-    CGContextShowTextAtPoint(pdfContext, pageRect.size.width / 2.0f - (textSize.width / 2.0f), pageRect.size.height / 2.0f - (fontSize / 3.0f), text, strlen(text));
+    CGContextShowTextAtPoint(pdfContext, floorf(pageRect.size.width / 2.0f - (textSize.width / 2.0f)), pageRect.size.height / 2.0f - (fontSize / 3.0f), text, strlen(text));
 
     CGContextEndPage (pdfContext);
     CGContextRelease (pdfContext);
@@ -229,8 +230,8 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 - (void)applyState:(FSSwitchState)newState forSwitchIdentifier:(NSString *)switchIdentifier
 {
 	SBApplication *launchApp = applicationForFSID(switchIdentifier);
-	if (launchApp != nil && !isOS7) [[objc_getClass("SBUIController") sharedInstance] activateApplicationFromSwitcher:launchApp];
-	else if (launchApp != nil) [[objc_getClass("SBUIController") sharedInstance] activateApplicationAnimated:launchApp];
+	if (launchApp != nil && !isOS7) [(SBUIController *)[objc_getClass("SBUIController") sharedInstance] activateApplicationFromSwitcher:launchApp];
+	else if (launchApp != nil) [(SBUIController *)[objc_getClass("SBUIController") sharedInstance] activateApplicationAnimated:launchApp];
 }
 
 @end
