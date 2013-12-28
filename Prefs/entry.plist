@@ -3,7 +3,7 @@
 	bundle = FlipLaunch;
 	cell = PSLinkCell;
 	detail = FLPrefsController;
-	icon = FlipLaunch.png;
+	icon = /Applications/Preferences.app/icon-table.png;
 	isController = 1;
 	label = FlipLaunch;
     };
