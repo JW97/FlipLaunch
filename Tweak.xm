@@ -224,7 +224,7 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 - (FSSwitchState)stateForSwitchIdentifier:(NSString *)switchIdentifier
 {
-	return FSSwitchStateOn;
+	return FSSwitchStateOff;
 }
 
 - (void)applyState:(FSSwitchState)newState forSwitchIdentifier:(NSString *)switchIdentifier
