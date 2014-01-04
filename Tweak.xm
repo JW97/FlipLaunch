@@ -224,10 +224,10 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 - (FSSwitchState)stateForSwitchIdentifier:(NSString *)switchIdentifier
 {
-	return FSSwitchStateOff;
+	return FSSwitchStateIndeterminate;
 }
 
-- (void)applyState:(FSSwitchState)newState forSwitchIdentifier:(NSString *)switchIdentifier
+- (void)applyActionForSwitchIdentifier:(NSString *)switchIdentifier
 {
 	SBApplication *launchApp = applicationForFSID(switchIdentifier);
 	if (launchApp != nil && !isOS7) [(SBUIController *)[objc_getClass("SBUIController") sharedInstance] activateApplicationFromSwitcher:launchApp];
