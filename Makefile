@@ -10,3 +10,6 @@ ARCHS = armv7 armv7s arm64
 include $(THEOS_MAKE_PATH)/tweak.mk
 SUBPROJECTS += Prefs
 include $(THEOS_MAKE_PATH)/aggregate.mk
+
+after-install::
+	install.exec "killall -9 SpringBoard"
