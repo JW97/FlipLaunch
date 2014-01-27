@@ -7,6 +7,7 @@
 - (NSString *)displayName;
 - (NSString *)bundleIdentifier;
 - (NSString *)displayIdentifier;
+- (NSString *)path;
 @end
 
 @interface SBApplicationController : NSObject
@@ -20,6 +21,35 @@
 
 //iOS 7
 - (void)activateApplicationAnimated:(id)application;
+@end
+
+@interface SBControlCenterController : NSObject
++ (SBControlCenterController *)sharedInstance;
+- (void)dismissAnimated:(BOOL)animated;
+@end
+
+@interface SBDeviceLockController : NSObject
++ (SBDeviceLockController *)sharedController;
+- (BOOL)isPasscodeLocked;
+@end
+
+@interface SBUnlockActionContext : NSObject
+- (id)initWithLockLabel:(NSString *)lockLabel shortLockLabel:(NSString *)label unlockAction:(void (^)())action identifier:(NSString *)id;
+- (void)setDeactivateAwayController:(BOOL)deactivate;
+@end
+
+@interface SBAlert : UIViewController
+@end
+
+@interface SBLockScreenViewControllerBase: SBAlert 
+- (void)setCustomUnlockActionContext:(SBUnlockActionContext *)context;
+- (void)setPasscodeLockVisible:(BOOL)visibile animated:(BOOL)animated completion:(void (^)())completion;
+@end
+
+@interface SBLockScreenManager : NSObject
++ (SBLockScreenManager *)sharedInstance;
+- (BOOL)isUILocked;
+- (SBLockScreenViewControllerBase *)lockScreenViewController;
 @end
 
 @interface FLDataSource : NSObject <FSSwitchDataSource>
@@ -58,6 +88,39 @@ static SBApplication *applicationForID(NSString *applicationID)
 static SBApplication *applicationForFSID(NSString *flipswitchID)
 {
 	return applicationForID(applicationIDFromFSID(flipswitchID));
+}
+
+static void launchAppDirect(SBApplication *application)
+{
+	if (application != nil && !isOS7) [(SBUIController *)[objc_getClass("SBUIController") sharedInstance] activateApplicationFromSwitcher:application];
+	else if (application != nil) [(SBUIController *)[objc_getClass("SBUIController") sharedInstance] activateApplicationAnimated:application];
+}
+
+static void launchApp(SBApplication *launchApp)
+{
+	if (launchApp == nil) return;
+
+	if ([[objc_getClass("SBDeviceLockController") sharedController] isPasscodeLocked]) {
+    	SBLockScreenManager *manager = (SBLockScreenManager *)[objc_getClass("SBLockScreenManager") sharedInstance];
+     	if ([manager isUILocked])
+     	{
+     		//Hotfix for switches displayed in CC as default, they dont dismiss Control Center when applying an action
+	       	if ([objc_getClass("SBControlCenterController") sharedInstance]) [(SBControlCenterController *)[objc_getClass("SBControlCenterController") sharedInstance] dismissAnimated:YES];
+
+	       	void (^action)() = ^() {
+         		launchAppDirect(launchApp);
+	        };
+	        SBLockScreenViewControllerBase *controller = [(SBLockScreenManager *)[objc_getClass("SBLockScreenManager") sharedInstance] lockScreenViewController];
+
+	        SBUnlockActionContext *context = [[objc_getClass("SBUnlockActionContext") alloc] initWithLockLabel:nil shortLockLabel:nil unlockAction:action identifier:nil];
+	        [context setDeactivateAwayController:YES];
+	        [controller setCustomUnlockActionContext:context];
+	        [controller setPasscodeLockVisible:YES animated:YES completion:nil];
+	        [context release];
+	       	return;
+    	}
+	}
+	launchAppDirect(launchApp);
 }
 
 static void PreferencesChangedCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo)
@@ -229,9 +292,17 @@ static void PreferencesChangedCallback(CFNotificationCenterRef center, void *obs
 
 - (void)applyActionForSwitchIdentifier:(NSString *)switchIdentifier
 {
-	SBApplication *launchApp = applicationForFSID(switchIdentifier);
-	if (launchApp != nil && !isOS7) [(SBUIController *)[objc_getClass("SBUIController") sharedInstance] activateApplicationFromSwitcher:launchApp];
-	else if (launchApp != nil) [(SBUIController *)[objc_getClass("SBUIController") sharedInstance] activateApplicationAnimated:launchApp];
+	SBApplication *launchApplication = applicationForFSID(switchIdentifier);
+	launchApp(launchApplication);
+}
+
+- (void)applyAlternateActionForSwitchIdentifier:(NSString *)switchIdentifier
+{
+	SBApplication *application = applicationForFSID(switchIdentifier);
+	NSURL *launchURL = [NSURL URLWithString:[NSString stringWithFormat:@"prefs:root=%@", [application bundleIdentifier]]];
+
+	NSString *checkPath = [[application path] stringByAppendingString:@"/Settings.bundle"];
+	if ([[NSFileManager defaultManager] fileExistsAtPath:checkPath]) [[FSSwitchPanel sharedPanel] openURLAsAlternateAction:launchURL];
 }
 
 @end
