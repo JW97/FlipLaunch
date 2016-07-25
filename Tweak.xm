@@ -13,6 +13,7 @@
 @interface SBApplicationController : NSObject
 + (SBApplicationController *)sharedInstance;
 - (SBApplication *)applicationWithDisplayIdentifier:(NSString *)identifier;
+- (SBApplication *)applicationWithBundleIdentifier:(NSString *)identifier;
 @end
 
 @interface SBUIController : NSObject
@@ -82,7 +83,13 @@ static NSString *applicationIDFromFSID(NSString *flipswitchID)
 
 static SBApplication *applicationForID(NSString *applicationID)
 {
-	return [[objc_getClass("SBApplicationController") sharedInstance] applicationWithDisplayIdentifier:applicationID];
+	id controller = [objc_getClass("SBApplicationController") sharedInstance];
+	if ([controller respondsToSelector:@selector(applicationWithDisplayIdentifier:)]) {
+		return [controller applicationWithDisplayIdentifier:applicationID];
+	} else {
+		return [controller applicationWithBundleIdentifier:applicationID];
+	}
+	
 }
 
 static SBApplication *applicationForFSID(NSString *flipswitchID)
